@@ -19,11 +19,48 @@ function parseData(sourseData) {
   }
 }
 
+function showTooltip(d) {
+  console.log(this);
+  const tooltip = d3.select('#chart1').select('.d3-tooltip');
+  // tooltip.html(() => this.config.tooltipContent(d));
+  tooltip.html(() => 'ttt');
+
+  let tooltipX = +this.x(d.date) + this.chartMargin.left + (this.dotPlaceholder * 2);
+  const tooltipY = +this.y(d.score) + this.chartMargin.top;
+  const tooltipWidth = tooltip.node().offsetWidth;
+  const tooltipHeight = tooltip.node().offsetHeight;
+  const tooltipMargin = `${(-1 * tooltipHeight) / 2}px 0 0 0`;
+
+  if (tooltipX > this.width / 2) {
+    tooltipX = tooltipX - tooltipWidth - 20;
+    tooltip.classed('d3-tooltip--right', true);
+  } else {
+    tooltip.classed('d3-tooltip--right', false);
+  }
+
+  tooltip
+    .style('left', `${tooltipX}px`)
+    .style('top', `${tooltipY}px`)
+    .style('margin', tooltipMargin)
+    .transition()
+    .duration(300)
+    .style('opacity', 1);
+}
+
+function hideTooltip() {
+  const tooltip = d3.select('#chart1').select('.d3-tooltip');
+  tooltip.transition()
+    .duration(500)
+    .style('opacity', 0);
+}
+
 class timeline {
   constructor(chartWrapper, config) {
+    this.chartWrapper = chartWrapper;
     this.config = config;
     parseData.bind(this)();
     const data = parseData(config.data);
+    this.data = parseData(config.data);
     this.svg = d3.select(chartWrapper).append('svg')
     const svg = this.svg;
     this.wrapperWidth = chartWrapper.clientWidth;
@@ -33,20 +70,23 @@ class timeline {
       .attr('width', this.wrapperWidth)
       .attr('height', this.wrapperHeight);
 
-    const tooltip = d3.select(chartWrapper).append('div')
+    d3.select(chartWrapper).append('div')
       .attr('class', 'd3-tooltip')
       .style('opacity', 0);
+    // const tooltip = this.tooltip;
 
     this.dotSize = 4;
-    const dotPlaceholder = 6;
+    this.dotPlaceholder = 6;
+    const dotPlaceholder = this.dotPlaceholder;
     let timelineHeight = 75;
 
-    const chartMargin = {
+    this.chartMargin = {
       top: 8,
       right: 20,
       bottom: timelineHeight + 35,
       left: 40,
     };
+    const chartMargin = this.chartMargin;
     const timelineMargin = {
       top: (this.wrapperHeight - timelineHeight),
       right: 20,
@@ -54,7 +94,8 @@ class timeline {
       left: 40,
     };
     timelineHeight = timelineHeight - timelineMargin.bottom;
-    const width = this.wrapperWidth - chartMargin.left - chartMargin.right;
+    this.width = this.wrapperWidth - chartMargin.left - chartMargin.right;
+    const width = this.width;
     const graphWidth = width - dotPlaceholder;
     const chartHeight = this.wrapperHeight - chartMargin.top - chartMargin.bottom;
 
@@ -170,6 +211,9 @@ class timeline {
     d3.select(chartWrapper)
       .style('position', 'relative');
 
+
+    showTooltip.bind(this, data)();
+    hideTooltip.bind(this)();
     // Add the scatterplot
     focus.append('g')
       .attr('class', 'dots')
@@ -209,37 +253,6 @@ class timeline {
       .attr('class', 'brush')
       .call(brush)
       .call(brush.move, x.range());
-
-    function showTooltip(d) {
-      tooltip.html(() => config.tooltipContent(d));
-
-      let tooltipX = +x(d.date) + chartMargin.left + (dotPlaceholder * 2);
-      const tooltipY = +y(d.score) + chartMargin.top;
-      const tooltipWidth = tooltip.node().offsetWidth;
-      const tooltipHeight = tooltip.node().offsetHeight;
-      const tooltipMargin = `${(-1 * tooltipHeight) / 2}px 0 0 0`;
-
-      if (tooltipX > width / 2) {
-        tooltipX = tooltipX - tooltipWidth - 20;
-        tooltip.classed('d3-tooltip--right', true);
-      } else {
-        tooltip.classed('d3-tooltip--right', false);
-      }
-
-      tooltip
-        .style('left', `${tooltipX}px`)
-        .style('top', `${tooltipY}px`)
-        .style('margin', tooltipMargin)
-        .transition()
-        .duration(300)
-        .style('opacity', 1);
-    }
-
-    function hideTooltip() {
-      tooltip.transition()
-        .duration(500)
-        .style('opacity', 0);
-    }
 
     function brushed() {
       if (d3.event.sourceEvent && d3.event.sourceEvent.type === 'zoom') return; // ignore brush-by-zoom
@@ -314,7 +327,9 @@ class timeline {
       .attr('r', this.dotSize)
       .attr('class', 'dot')
       .attr('cx', d => this.x(d.date))
-      .attr('cy', d => this.y(d.score));
+      .attr('cy', d => this.y(d.score))
+      .on('mouseover', showTooltip)
+      .on('mouseout', hideTooltip);
 
     dots.transition()
       .attr('cx', d => this.x(d.date))
